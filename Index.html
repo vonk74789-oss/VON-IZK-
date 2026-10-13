@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INUZUKA · Signal Generator</title>
+    <style>
+        /* ===== RESET ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #0a0a0a;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            position: relative;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 40px 20px;
+        }
+
+        /* ===== VIDÉO EN FOND ===== */
+        #bg-video {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 0;
+            opacity: 0.35;
+            pointer-events: none;
+            filter: brightness(0.5) saturate(1.2) hue-rotate(10deg);
+        }
+
+        .bg-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+            background: radial-gradient(ellipse at center, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.7) 100%);
+            pointer-events: none;
+        }
+
+        /* ===== PARTICULES D'OR ET DE LUMIÈRE ===== */
+        .particle-container {
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            animation: floatParticle 14s ease-in-out infinite;
+            box-shadow: 0 0 20px currentColor;
+        }
+
+        .particle.gold { background: #ffd700; color: #ffd700; }
+        .particle.red { background: #ff2200; color: #ff2200; }
+        .particle.cyan { background: #00ffff; color: #00ffff; }
+        .particle.white { background: #ffffff; color: #ffffff; }
+        .particle.purple { background: #aa00ff; color: #aa00ff; }
+
+        @keyframes floatParticle {
+            0%, 100% { transform: translate(0, 0) scale(1); opacity: 0; }
+            20% { opacity: 1; }
+            80% { opacity: 0.8; }
+            100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+        }
+
+        /* Particules étincelantes */
+        .particle:nth-child(1) { --tx: 300px; --ty: -200px; animation-delay: 0s; left: 5%; top: 10%; }
+        .particle:nth-child(2) { --tx: -250px; --ty: 300px; animation-delay: 1.5s; left: 25%; top: 40%; }
+        .particle:nth-child(3) { --tx: 350px; --ty: 200px; animation-delay: 3s; left: 55%; top: 25%; }
+        .particle:nth-child(4) { --tx: -300px; --ty: -250px; animation-delay: 4.5s; left: 75%; top: 60%; }
+        .particle:nth-child(5) { --tx: 200px; --ty: -350px; animation-delay: 6s; left: 15%; top: 70%; }
+        .particle:nth-child(6) { --tx: -200px; --ty: 400px; animation-delay: 7.5s; left: 45%; top: 5%; }
+        .particle:nth-child(7) { --tx: 400px; --ty: 150px; animation-delay: 9s; left: 65%; top: 50%; }
+        .particle:nth-child(8) { --tx: -350px; --ty: -300px; animation-delay: 10.5s; left: 35%; top: 80%; }
+        .particle:nth-child(9) { --tx: 250px; --ty: -280px; animation-delay: 2s; left: 85%; top: 20%; }
+        .particle:nth-child(10) { --tx: -180px; --ty: 320px; animation-delay: 6.5s; left: 50%; top: 90%; }
+        .particle:nth-child(11) { --tx: 280px; --ty: -180px; animation-delay: 3.7s; left: 10%; top: 50%; }
+        .particle:nth-child(12) { --tx: -220px; --ty: 260px; animation-delay: 5.2s; left: 90%; top: 35%; }
+
+        /* ===== ACCESS OVERLAY ===== */
+        #access-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.94);
+            backdrop-filter: blur(25px);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            gap: 20px;
+        }
+        #access-overlay.hidden { display: none; }
+
+        #access-overlay .logo {
+            font-size: 58px;
+            font-weight: 900;
+            letter-spacing: 16px;
+            color: #fff;
+            text-shadow: 
+                0 0 60px rgba(255, 215, 0, 0.6), 
+                0 0 120px rgba(255, 215, 0, 0.3),
+                0 0 200px rgba(255, 140, 0, 0.15);
+            font-family: 'Courier New', monospace;
+            text-align: center;
+            animation: logoGlow 3s ease-in-out infinite;
+        }
+        @keyframes logoGlow {
+            0%, 100% { text-shadow: 0 0 60px rgba(255, 215, 0, 0.6), 0 0 120px rgba(255, 215, 0, 0.3), 0 0 200px rgba(255, 140, 0, 0.15); }
+            50% { text-shadow: 0 0 80px rgba(255, 215, 0, 0.9), 0 0 160px rgba(255, 215, 0, 0.5), 0 0 300px rgba(255, 140, 0, 0.3); }
+        }
+        #access-overlay .logo span { 
+            color: #ffd700;
+            text-shadow: 0 0 80px rgba(255, 215, 0, 0.8);
+        }
+
+        #access-overlay .sub {
+            color: #ffd700;
+            font-size: 14px;
+            letter-spacing: 12px;
+            text-transform: uppercase;
+            font-family: 'Courier New', monospace;
+            text-shadow: 0 0 40px rgba(255, 215, 0, 0.4);
+        }
+
+        #access-overlay .lock-icon {
+            font-size: 50px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.7; }
+            50% { transform: scale(1.2); opacity: 1; }
+        }
+
+        #access-overlay .code-input {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            max-width: 340px;
+        }
+
+        #access-overlay input {
+            background: rgba(255, 255, 255, 0.04);
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            border-radius: 12px;
+            padding: 16px 28px;
+            font-size: 22px;
+            color: #fff;
+            text-align: center;
+            width: 100%;
+            outline: none;
+            letter-spacing: 8px;
+            font-family: 'Courier New', monospace;
+            transition: 0.4s;
+        }
+        #access-overlay input:focus {
+            border-color: #ffd700;
+            box-shadow: 0 0 60px rgba(255, 215, 0, 0.15);
+        }
+        #access-overlay .btn-access {
+            background: linear-gradient(135deg, #ffd700, #ff8c00);
+            color: #000;
+            border: none;
+            padding: 16px 60px;
+            border-radius: 40px;
+            font-size: 17px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 5px;
+            box-shadow: 0 0 50px rgba(255, 215, 0, 0.25);
+            transition: 0.3s;
+            width: 100%;
+        }
+        #access-overlay .btn-access:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 80px rgba(255, 215, 0, 0.4);
+        }
+        #access-overlay .error-msg {
+            color: #ff4444;
+            font-size: 15px;
+            min-height: 22px;
+            font-family: 'Courier New', monospace;
+        }
+        #access-overlay .info-codes {
+            color: #666;
+            font-size: 12px;
+            font-family: 'Courier New', monospace;
+            text-align: center;
+            line-height: 2.2;
+            letter-spacing: 1px;
+            margin-top: 10px;
+        }
+        #access-overlay .info-codes .family-code {
+            color: #ffd700;
+            font-weight: bold;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+        }
+        #access-overlay .info-codes .fans-code {
+            color: #ff4444;
+            font-weight: bold;
+            text-shadow: 0 0 20px rgba(255, 68, 68, 0.5);
+        }
+
+        /* ===== MAIN CONTENT ===== */
+        #main-content {
+            display: none;
+            position: relative;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(16px);
+            border-radius: 36px;
+            padding: 44px 42px;
+            max-width: 740px;
+            width: 100%;
+            margin: 20px auto;
+            border: 1px solid rgba(255, 215, 0, 0.08);
+            box-shadow: 
+                0 0 80px rgba(255, 215, 0, 0.03),
+                inset 0 0 80px rgba(255, 215, 0, 0.02);
+        }
+
+        /* === BADGE SECTION === */
+        .section-badge {
+            display: inline-block;
+            padding: 9px 28px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 6px;
+            text-transform: uppercase;
+            font-family: 'Courier New', monospace;
+            margin-bottom: 16px;
+            text-align: center;
+            width: 100%;
+        }
+        .section-badge.family {
+            background: rgba(255, 215, 0, 0.12);
+            color: #ffd700;
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            animation: badgeGlowGold 2.5s ease-in-out infinite;
+        }
+        .section-badge.fans {
+            background: rgba(255, 0, 0, 0.12);
+            color: #ff4444;
+            border: 1px solid rgba(255, 0, 0, 0.2);
+            animation: badgeGlowRed 2.5s ease-in-out infinite;
+        }
+
+        @keyframes badgeGlowGold {
+            0%, 100% { box-shadow: 0 0 25px rgba(255, 215, 0, 0.05); }
+            50% { box-shadow: 0 0 50px rgba(255, 215, 0, 0.2); }
+        }
+        @keyframes badgeGlowRed {
+            0%, 100% { box-shadow: 0 0 25px rgba(255, 0, 0, 0.05); }
+            50% { box-shadow: 0 0 50px rgba(255, 0, 0, 0.2); }
+        }
+
+        .header-image {
+            width: 100%;
+            max-height: 280px;
+            object-fit: cover;
+            border-radius: 20px;
+            margin-bottom: 18px;
+            border: 1px solid rgba(255, 215, 0, 0.08);
+            box-shadow: 0 0 60px rgba(255, 215, 0, 0.04);
+        }
+
+        /* === LOGO WHATSAPP + INUZUKA === */
+        .logo-wa-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 18px;
+            margin-bottom: 2px;
+        }
+
+        .wa-icon {
+            width: 44px;
+            height: 44px;
+            fill: #25D366;
+            filter: drop-shadow(0 0 30px rgba(37, 211, 102, 0.3));
+            animation: waPulse 2.5s ease-in-out infinite;
+            flex-shrink: 0;
+        }
+
+        @keyframes waPulse {
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 30px rgba(37, 211, 102, 0.3)); }
+            50% { transform: scale(1.1); filter: drop-shadow(0 0 50px rgba(37, 211, 102, 0.6)); }
+        }
+
+        .main-logo {
+            font-size: 48px;
+            font-weight: 900;
+            letter-spacing: 14px;
+            color: #ffffff;
+            text-shadow: 
+                0 0 80px rgba(255, 215, 0, 0.2),
+                0 0 160px rgba(255, 140, 0, 0.1);
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            margin-bottom: 0;
+            animation: inuzukaGlow 4s ease-in-out infinite;
+        }
+        @keyframes inuzukaGlow {
+            0%, 100% { text-shadow: 0 0 80px rgba(255, 215, 0, 0.2), 0 0 160px rgba(255, 140, 0, 0.1); }
+            50% { text-shadow: 0 0 120px rgba(255, 215, 0, 0.4), 0 0 240px rgba(255, 140, 0, 0.2); }
+        }
+        .main-logo span { 
+            color: #ffd700;
+            text-shadow: 
+                0 0 80px rgba(255, 215, 0, 0.5),
+                0 0 160px rgba(255, 215, 0, 0.2);
+            animation: spanGlow 3s ease-in-out infinite;
+        }
+        @keyframes spanGlow {
+            0%, 100% { text-shadow: 0 0 80px rgba(255, 215, 0, 0.5), 0 0 160px rgba(255, 215, 0, 0.2); }
+            50% { text-shadow: 0 0 120px rgba(255, 215, 0, 0.8), 0 0 240px rgba(255, 215, 0, 0.4); }
+        }
+
+        .main-sub {
+            text-align: center;
+            color: #ffd700;
+            font-size: 12px;
+            letter-spacing: 12px;
+            text-transform: uppercase;
+            border-bottom: 1px solid rgba(255, 215, 0, 0.08);
+            padding-bottom: 18px;
+            margin-bottom: 24px;
+            font-family: 'Courier New', monospace;
+            opacity: 0.8;
+            animation: subGlow 3s ease-in-out infinite;
+        }
+        @keyframes subGlow {
+            0%, 100% { text-shadow: 0 0 30px rgba(255, 215, 0, 0.1); }
+            50% { text-shadow: 0 0 60px rgba(255, 215, 0, 0.3); }
+        }
+
+        .main-sub.family-sub {
+            color: #ffd700;
+        }
+        .main-sub.fans-sub {
+            color: #ff4444;
+        }
+
+        /* === BOUTON SON === */
+        .sound-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 50%;
+            width: 52px;
+            height: 52px;
+            color: #aaa;
+            font-size: 24px;
+            cursor: pointer;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(12px);
+            font-family: 'Courier New', monospace;
+        }
+        .sound-btn:hover {
+            background: rgba(255, 255, 255, 0.14);
+            transform: scale(1.08);
+        }
+        .sound-btn.active {
+            color: #25D366;
+            border-color: rgba(37, 211, 102, 0.4);
+            box-shadow: 0 0 40px rgba(37, 211, 102, 0.15);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        .form-group label {
+            color: #ccc;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            display: block;
+            margin-bottom: 6px;
+            font-family: 'Courier New', monospace;
+        }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.04);
+            border: none;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 14px 18px;
+            color: #eee;
+            font-size: 15px;
+            font-family: 'Segoe UI', sans-serif;
+            outline: none;
+            transition: 0.4s;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            border-bottom: 1px solid #ffd700;
+            box-shadow: 0 8px 30px -12px rgba(255, 215, 0, 0.1);
+        }
+        .form-group select option {
+            background: #111;
+            color: #eee;
+        }
+        .form-group textarea {
+            min-height: 70px;
+            resize: vertical;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .generated-box {
+            background: rgba(255, 215, 0, 0.02);
+            border-radius: 20px;
+            padding: 22px 24px;
+            margin: 20px 0 22px;
+            text-align: left;
+            display: none;
+            max-height: 450px;
+            overflow-y: auto;
+            min-height: 60px;
+            border-left: 3px solid rgba(255, 215, 0, 0.15);
+            box-shadow: inset 0 0 60px rgba(255, 215, 0, 0.02);
+        }
+        .generated-box.visible { display: block; }
+        .generated-box .msg-title {
+            color: #ffd700;
+            font-size: 11px;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            font-family: 'Courier New', monospace;
+            opacity: 0.7;
+            animation: titlePulse 2s ease-in-out infinite;
+        }
+        @keyframes titlePulse {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; text-shadow: 0 0 30px rgba(255, 215, 0, 0.3); }
+        }
+        .generated-box .msg-content {
+            color: #eee;
+            font-size: 14px;
+            line-height: 2;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        .generated-box .cursor-blink {
+            display: inline-block;
+            width: 2px;
+            height: 18px;
+            background: #ffd700;
+            animation: blink 0.7s step-end infinite;
+            vertical-align: text-bottom;
+            margin-left: 2px;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .btn {
+            padding: 16px 36px;
+            border: none;
+            border-radius: 50px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.3s ease;
+            letter-spacing: 1.5px;
+            flex: 1 1 auto;
+            min-width: 130px;
+            font-family: 'Courier New', monospace;
+        }
+        .btn-generate {
+            background: linear-gradient(135deg, #ffd700, #ff8c00);
+            color: #000;
+            box-shadow: 0 0 50px rgba(255, 215, 0, 0.15);
+        }
+        .btn-generate:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 80px rgba(255, 215, 0, 0.3);
+        }
+        .btn-generate:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn-copy {
+            background: rgba(255, 255, 255, 0.06);
+            color: #ccc;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .btn-copy:hover {
+            background: rgba(255, 255, 255, 0.14);
+            transform: scale(1.04);
+        }
+        .btn-copy:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        .btn-whatsapp {
+            background: #25D366;
+            color: #fff;
+            box-shadow: 0 0 40px rgba(37, 211, 102, 0.15);
+        }
+        .btn-whatsapp:hover {
+            background: #1da851;
+            transform: scale(1.05);
+            box-shadow: 0 0 60px rgba(37, 211, 102, 0.3);
+        }
+        .btn-whatsapp:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(17, 17, 17, 0.96);
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 215, 0, 0.15);
+            padding: 14px 32px;
+            border-radius: 40px;
+            color: #ccc;
+            font-size: 13px;
+            z-index: 1002;
+            opacity: 0;
+            transition: 0.4s;
+            pointer-events: none;
+            font-family: 'Courier New', monospace;
+            box-shadow: 0 0 60px rgba(255, 215, 0, 0.05);
+        }
+        .toast.show { opacity: 1; }
+
+        .status-text {
+            color: #888;
+            font-size: 12px;
+            text-align: center;
+            margin-top: 10px;
+            font-family: 'Courier New', monospace;
+            min-height: 20px;
+            letter-spacing: 1px;
+        }
+        .status-text.family-status {
+            color: #ffd700;
+        }
+        .status-text.fans-status {
+            color: #ff4444;
+        }
+
+        /* ===== SIGNATURE BY JOY BOY AVEC EFFETS LUMINEUX ===== */
+        .footer-signature {
+            text-align: center;
+            margin-top: 28px;
+            padding-top: 22px;
+            border-top: 1px solid rgba(255, 255, 255, 0.04);
+            font-family: 'Courier New', monospace;
+        }
+        .footer-signature .by-joyboy {
+            font-size: 28px;
+            font-weight: 900;
+            letter-spacing: 8px;
+            color: #fff;
+            text-transform: uppercase;
+            animation: joyboyLight 2s ease-in-out infinite;
+            display: inline-block;
+        }
+        @keyframes joyboyLight {
+            0%, 100% {
+                text-shadow: 
+                    0 0 30px rgba(255, 215, 0, 0.6),
+                    0 0 60px rgba(255, 215, 0, 0.3),
+                    0 0 120px rgba(255, 140, 0, 0.15),
+                    0 0 200px rgba(255, 215, 0, 0.05);
+                color: #fff;
+            }
+            25% {
+                text-shadow: 
+                    0 0 40px rgba(255, 215, 0, 0.9),
+                    0 0 80px rgba(255, 215, 0, 0.5),
+                    0 0 160px rgba(255, 140, 0, 0.25),
+                    0 0 280px rgba(255, 215, 0, 0.1);
+                color: #ffd700;
+            }
+            50% {
+                text-shadow: 
+                    0 0 50px rgba(255, 200, 0, 1),
+                    0 0 100px rgba(255, 180, 0, 0.7),
+                    0 0 200px rgba(255, 140, 0, 0.35),
+                    0 0 350px rgba(255, 215, 0, 0.15);
+                color: #ffe066;
+            }
+            75% {
+                text-shadow: 
+                    0 0 40px rgba(255, 215, 0, 0.8),
+                    0 0 80px rgba(255, 215, 0, 0.4),
+                    0 0 160px rgba(255, 140, 0, 0.2),
+                    0 0 280px rgba(255, 215, 0, 0.08);
+                color: #ffd700;
+            }
+        }
+        .footer-signature .by-joyboy .joy-span {
+            color: #ffd700;
+            animation: joySpanLight 1.5s ease-in-out infinite alternate;
+        }
+        @keyframes joySpanLight {
+            0% { text-shadow: 0 0 30px rgba(255, 215, 0, 0.5); }
+            100% { text-shadow: 0 0 80px rgba(255, 215, 0, 1), 0 0 160px rgba(255, 200, 0, 0.6); }
+        }
+
+        .whatsapp-note {
+            text-align: center;
+            color: #555;
+            font-size: 10px;
+            margin-top: 10px;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 1.5px;
+        }
+
+        @media (max-width: 600px) {
+            #main-content { padding: 26px 18px; margin: 10px; border-radius: 24px; }
+            .main-logo { font-size: 32px; letter-spacing: 10px; }
+            .logo-wa-container { gap: 12px; }
+            .wa-icon { width: 34px; height: 34px; }
+            .header-image { max-height: 180px; }
+            .sound-btn { bottom: 80px; right: 16px; width: 46px; height: 46px; font-size: 20px; }
+            #access-overlay input { font-size: 17px; padding: 14px 18px; }
+            #access-overlay .logo { font-size: 38px; letter-spacing: 12px; }
+            .footer-signature .by-joyboy { font-size: 22px; letter-spacing: 6px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- === VIDÉO EN FOND === -->
+    <video autoplay loop playsinline id="bg-video">
+        <source src="IMG_6901.MOV" type="video/mp4">
+        <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4">
+        Votre navigateur ne supporte pas la vidéo.
+    </video>
+    <div class="bg-overlay"></div>
+
+    <!-- === PARTICULES D'OR ET DE LUMIÈRE === -->
+    <div class="particle-container">
+        <div class="particle gold"></div>
+        <div class="particle red"></div>
+        <div class="particle cyan"></div>
+        <div class="particle gold"></div>
+        <div class="particle white"></div>
+        <div class="particle purple"></div>
+        <div class="particle gold"></div>
+        <div class="particle red"></div>
+        <div class="particle cyan"></div>
+        <div class="particle white"></div>
+        <div class="particle gold"></div>
+        <div class="particle purple"></div>
+    </div>
+
+    <!-- === MUSIQUE === -->
+    <audio id="bg-audio" loop>
+        <source src="song.mp3.m4a" type="audio/mp4">
+        <source src="song.mp3" type="audio/mpeg">
+    </audio>
+
+    <!-- === BOUTON SON === -->
+    <button class="sound-btn" id="soundBtn" onclick="toggleSound()">🔇</button>
+
+    <!-- === ACCESS OVERLAY === -->
+    <div id="access-overlay">
+        <div class="lock-icon">⛔</div>
+        <div class="logo">I<span>N</span>UZUKA</div>
+        <div class="sub">⚓ Choose Your Path ⚓</div>
+
+        <div class="code-input">
+            <input type="password" id="access-input" placeholder="••••" maxlength="10" autofocus>
+            <button class="btn-access" onclick="checkAccess()">⚡ ENTER</button>
+        </div>
+
+        <div class="error-msg" id="access-error"></div>
+
+        <div class="info-codes">
+            🏠 <span class="family-code">FAMILY2025</span> — For Family<br>
+            🔥 <span class="fans-code">FANS2025</span> — For Fans
+        </div>
+    </div>
+
+    <!-- === MAIN CONTENT === -->
+    <div id="main-content">
+        <!-- BADGE (affiché dynamiquement) -->
+        <div id="sectionBadge" class="section-badge family">🏠 FAMILY</div>
+
+        <img class="header-image" id="header-image" src="53517900-6B79-4E2E-92C0-16CD724C4CAE.jpeg" alt="INUZUKA" onerror="this.style.display='none'">
+
+        <!-- === LOGO WHATSAPP + INUZUKA === -->
+        <div class="logo-wa-container">
+            <svg class="wa-icon" viewBox="0 0 24 24">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+            </svg>
+            <div class="main-logo">I<span>N</span>UZUKA</div>
+        </div>
+        <div class="main-sub" id="mainSub">⚡ Signal Generator ⚡</div>
+
+        <div class="form-group">
+            <label>👤 Name / Username of the abuser</label>
+            <input type="text" id="nom" placeholder="Ex: John DOE or @username">
+        </div>
+
+        <div class="form-group">
+            <label>📱 Their WhatsApp number</label>
+            <input type="text" id="numero" placeholder="+221 70 820 15 85">
+        </div>
+
+        <div class="form-group">
+            <label>⚠️ Type of violation</label>
+            <select id="type">
+                <option value="harassment">Harassment / Bullying</option>
+                <option value="scam">Scam / Fraud</option>
+                <option value="identity">Identity Theft</option>
+                <option value="illegal">Illegal Content</option>
+                <option value="threats">Threats / Violence</option>
+                <option value="impersonation">Impersonation</option>
+                <option value="doxxing">Doxxing / Private info leaked</option>
+                <option value="other">Other (serious)</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>📝 What happened ? (be honest)</label>
+            <textarea id="details" placeholder="Describe exactly what this person did to you..."></textarea>
+        </div>
+
+        <div class="generated-box" id="generated-box">
+            <div class="msg-title">📨 GENERATING MESSAGE...</div>
+            <div class="msg-content" id="message-output">
+                <span class="cursor-blink"></span>
+            </div>
+        </div>
+
+        <div class="status-text" id="status-text">Fill the form and click GENERATE</div>
+
+        <div class="btn-group">
+            <button class="btn btn-generate" id="btn-generate" onclick="startGeneration()">⚡ GENERATE</button>
+            <button class="btn btn-copy" id="btn-copy" disabled onclick="copyMessage()">📋 COPY</button>
+            <button class="btn btn-whatsapp" id="btn-wa" disabled onclick="sendWhatsApp()">💬 WHATSAPP</button>
+        </div>
+
+        <div class="whatsapp-note">📌 Message copied automatically — then paste in WhatsApp Support chat</div>
+
+        <!-- === SIGNATURE BY JOY BOY AVEC EFFETS LUMINEUX === -->
+        <div class="footer-signature">
+            <span class="by-joyboy">by J<span class="joy-span">O</span>Y B<span class="joy-span">O</span>Y</span>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // GESTION DU SON
+        // ============================================
+        var video = document.getElementById('bg-video');
+        var audio = document.getElementById('bg-audio');
+        var soundBtn = document.getElementById('soundBtn');
+        var isSoundOn = false;
+
+        function toggleSound() {
+            if (isSoundOn) {
+                video.muted = true;
+                audio.pause();
+                soundBtn.textContent = '🔇';
+                soundBtn.classList.remove('active');
+                isSoundOn = false;
+            } else {
+                video.muted = false;
+                video.volume = 0.3;
+                audio.volume = 0.4;
+                audio.play().catch(function(e) {});
+                soundBtn.textContent = '🔊';
+                soundBtn.classList.add('active');
+                isSoundOn = true;
+            }
+        }
+
+        // ============================================
+        // CODE D'ACCÈS : FAMILY2025 ou FANS2025
+        // ============================================
+        var currentSection = 'family';
+
+        function checkAccess() {
+            var input = document.getElementById('access-input');
+            var error = document.getElementById('access-error');
+            var code = input.value.trim().toUpperCase();
+
+            if (code === 'FAMILY2025') {
+                document.getElementById('access-overlay').style.display = 'none';
+                document.getElementById('main-content').style.display = 'block';
+                error.textContent = '';
+                currentSection = 'family';
+                applySectionStyle('family');
+            } else if (code === 'FANS2025') {
+                document.getElementById('access-overlay').style.display = 'none';
+                document.getElementById('main-content').style.display = 'block';
+                error.textContent = '';
+                currentSection = 'fans';
+                applySectionStyle('fans');
+            } else {
+                error.textContent = '❌ Code incorrect. Réessaie.';
+                input.value = '';
+                input.focus();
+            }
+        }
+
+        document.getElementById('access-input').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                checkAccess();
+            }
+        });
+
+        function applySectionStyle(section) {
+            var badge = document.getElementById('sectionBadge');
+            var sub = document.getElementById('mainSub');
+            var status = document.getElementById('status-text');
+
+            if (section === 'family') {
+                badge.className = 'section-badge family';
+                badge.textContent = '🏠 FAMILY';
+                sub.className = 'main-sub family-sub';
+                sub.textContent = '❤️ Protect Your Family';
+                status.className = 'status-text family-status';
+                status.textContent = 'Fill the form and click GENERATE';
+                document.getElementById('main-content').style.borderColor = 'rgba(255, 215, 0, 0.15)';
+            } else {
+                badge.className = 'section-badge fans';
+                badge.textContent = '🔥 FANS';
+                sub.className = 'main-sub fans-sub';
+                sub.textContent = '⚡ Protect Your Community';
+                status.className = 'status-text fans-status';
+                status.textContent = 'Fill the form and click GENERATE';
+                document.getElementById('main-content').style.borderColor = 'rgba(255, 0, 0, 0.15)';
+            }
+        }
+
+        // ============================================
+        // MESSAGES ULTRA CONVAINCANTS (FAMILLE / FANS)
+        // ============================================
+        var messageIndex = 0;
+
+        function generateFullMessage() {
+            var nom = document.getElementById('nom').value.trim();
+            var numero = document.getElementById('numero').value.trim();
+            var details = document.getElementById('details').value.trim();
+            var type = document.getElementById('type').value;
+
+            var typeLabels = {
+                harassment: "harassment and bullying",
+                scam: "scam and fraud",
+                identity: "identity theft",
+                illegal: "illegal content",
+                threats: "threats and violence",
+                impersonation: "impersonation",
+                doxxing: "doxxing and sharing private information",
+                other: "serious violations"
+            };
+
+            var typeLabel = typeLabels[type] || "serious violations";
+
+            var violationTexts = {
+                harassment: "Harassment and intimidation\nAbusive behavior\nMaking me feel unsafe",
+                scam: "Scam attempts\nFraudulent behavior\nMisleading others for money",
+                identity: "Identity theft\nPretending to be me or others\nUsing fake identity to harm",
+                illegal: "Sharing illegal content\nInappropriate material\nViolating community standards",
+                threats: "Threats and intimidation\nViolent language\nMaking me fear for my safety",
+                impersonation: "Impersonation\nPretending to be someone they're not\nDeceiving others",
+                doxxing: "Sharing private information\nDoxxing\nViolating my privacy",
+                other: "Multiple Terms of Service violations\nAbusive behavior\nCreating an unsafe environment"
+            };
+
+            var violationText = violationTexts[type] || violationTexts.other;
+
+            // ========== MESSAGES FAMILLE ==========
+            var familyMessages = [
+                "Dear WhatsApp Support Team,\n\nI am writing to you today with a heavy heart because my family is going through something terrible. A person on WhatsApp has been sending threatening messages to my wife and children. They have been insulting them, making them feel unsafe, and even threatening to harm them. My children are scared to even open the app now. This person knows our personal information and is using it to intimidate us.\n\nI have tried blocking them but they keep creating new accounts. I've reported them before but nothing changed. I am genuinely scared for my family's safety. We are not sleeping well. My wife is stressed, my kids are anxious, and I feel helpless because I can't stop this person.\n\nI am asking you, from the bottom of my heart, to please investigate this account and ban it permanently. I have screenshots of everything — the threats, the insults, the harassment. I can share all of it if needed. Please don't let this person continue to terrorize my family.\n\nThank you for reading this. I hope you can help us find peace again.\n\nSincerely,\nA father who just wants to protect his family",
+
+                "Hello WhatsApp Support,\n\nI am reaching out because I am exhausted. For weeks now, my family has been targeted by a user who seems to have no respect for anyone. They have been sending cruel messages to my wife, calling her names, and making her feel worthless. My children have seen these messages and they are confused and hurt. I am trying to be strong for them, but I am struggling.\n\nI don't know why this person is doing this. We have never done anything to them. But they won't stop. Every day there is a new message, a new insult, a new threat. I feel like I'm failing my family because I can't make it stop.\n\nI am begging you to look into this. I have documented everything — every message, every threat. I am ready to send it all to you. This person is not just annoying — they are dangerous. They are destroying my family's peace of mind.\n\nPlease, I am begging you, take action. Block this person. Investigate the account. Do whatever it takes to stop this harassment. My family needs peace. We need to feel safe again.\n\nThank you for your time.\n\nSincerely,\nA tired parent who needs help",
+
+                "Dear WhatsApp Team,\n\nI am writing to file a formal complaint against a user who has been harassing my family. I am angry — not just because of what they are doing, but because I feel like WhatsApp is not doing enough to stop it.\n\nThis person has been sending threatening messages to my children. They are teenagers, and they are scared. They don't want to use WhatsApp anymore because of this person. I have tried everything: blocking, reporting, ignoring. Nothing works. They just come back with a new number or a new account.\n\nI want to know: what does it take for WhatsApp to take action? How many reports do we need to make before someone actually investigates? I have sent you screenshots, I have given you the details, and yet nothing has changed.\n\nI am not asking for much. I am asking for you to do your job. Investigate this account. Ban this person. Protect my family from this harassment. I have evidence and I am ready to share it all.\n\nPlease respond to this message with confirmation of action taken. I am not going to let this go.\n\nRegards,\nA frustrated father who has had enough"
+            ];
+
+            // ========== MESSAGES FANS ==========
+            var fansMessages = [
+                "Dear WhatsApp Support Team,\n\nI am writing to you because my fans are being targeted by scammers on your platform. Someone is pretending to be me and asking my followers for money. They are using my name, my photos, and my reputation to trick people who trust me.\n\nThis is not just a scam — it's a betrayal. My fans have supported me through everything. They believe in me. And now, someone is using that trust to steal from them. I feel responsible. I feel like I failed them by not catching this sooner.\n\nI have received over 100 messages from fans telling me they were contacted by this impersonator. Some of them almost sent money. This is unacceptable. I need your help to shut this down immediately.\n\nI have screenshots of the impersonator's conversations. I have the account details. I am ready to share everything with you. Please investigate this account and ban it permanently. My fans deserve protection.\n\nThank you for taking this seriously.\n\nSincerely,\nA creator who stands by his fans",
+
+                "Hello WhatsApp Support,\n\nI am a content creator who has built a community of thousands of fans who trust me. I have spent years earning that trust. And now, someone is using WhatsApp to destroy it.\n\nThere is a user who is impersonating me and scamming my fans. They are sending messages asking for donations, promising exclusive content, and stealing money from people who believe they are helping me. This is not just a violation of your rules — it's a violation of my relationship with my fans.\n\nMy fans are not just numbers. They are real people who have supported me through everything. They are students, workers, dreamers — they deserve better than this. They deserve to be protected.\n\nI demand that you investigate this account and remove it from the platform. I have evidence. I have proof. I have everything you need to take action.\n\nPlease don't let this continue. My fans are counting on me to protect them. And I am counting on you to do your job.\n\nThank you for your time.\n\nBest regards,\nA passionate creator",
+
+                "Dear WhatsApp Team,\n\nI never thought I would have to write a message like this. But here I am, because my fans are being scammed and I need your help.\n\nMy fans are amazing. They are the reason I wake up every morning with a smile on my face. They support me, they encourage me, they believe in me. And now, someone is taking advantage of that trust to steal from them.\n\nI have been receiving messages from fans who were contacted by a fake account pretending to be me. The scammer is asking for money, promising exclusive content, and using my name to gain trust. Some of my fans almost fell for it. Some of them are heartbroken that someone would do this.\n\nI need WhatsApp to step up and protect my community. I have screenshots of the fake account. I have everything you need to investigate and ban this person.\n\nPlease help me protect my fans. They deserve to feel safe. They deserve to know that WhatsApp is a place where they can connect with me without being scammed.\n\nThank you for your help.\n\nSincerely,\nA grateful creator"
+            ];
+
+            var messages = (currentSection === 'family') ? familyMessages : fansMessages;
+            var msg = messages[messageIndex % messages.length];
+
+            msg = msg.replace('[numéro ou nom]', (nom || 'Unknown') + (numero ? ' (' + numero + ')' : ''));
+
+            messageIndex++;
+            return msg;
+        }
+
+        // ============================================
+        // GÉNÉRATION PROGRESSIVE
+        // ============================================
+        var isGenerating = false;
+        var displayText = '';
+
+        function startGeneration() {
+            if (isGenerating) return;
+
+            var output = document.getElementById('message-output');
+            var box = document.getElementById('generated-box');
+            var btnGen = document.getElementById('btn-generate');
+            var btnCopy = document.getElementById('btn-copy');
+            var btnWa = document.getElementById('btn-wa');
+            var status = document.getElementById('status-text');
+
+            isGenerating = true;
+            btnGen.disabled = true;
+            btnCopy.disabled = true;
+            btnWa.disabled = true;
+            status.textContent = '⏳ Generating...';
+            output.textContent = '';
+            box.style.display = 'block';
+
+            var fullMessage = generateFullMessage();
+            var chars = fullMessage.split('');
+            var index = 0;
+            displayText = '';
+
+            function typeNextChar() {
+                if (index < chars.length) {
+                    displayText += chars[index];
+                    output.textContent = displayText;
+                    index++;
+                    var delay = 10 + Math.random() * 18;
+                    setTimeout(typeNextChar, delay);
+                } else {
+                    isGenerating = false;
+                    btnGen.disabled = false;
+                    btnCopy.disabled = false;
+                    btnWa.disabled = false;
+                    status.textContent = '✅ Message ready';
+                    status.style.color = (currentSection === 'family') ? '#ffd700' : '#ff4444';
+                    showToast('✅ Message generated');
+                }
+            }
+
+            setTimeout(typeNextChar, 100);
+        }
+
+        function copyMessage() {
+            var text = document.getElementById('message-output').textContent;
+            if (!text) return showToast('❌ Generate a message first');
+            navigator.clipboard.writeText(text).then(function() {
+                showToast('📋 Copied');
+            }).catch(function() {
+                var area = document.createElement('textarea');
+                area.value = text;
+                document.body.appendChild(area);
+                area.select();
+                document.execCommand('copy');
+                area.remove();
+                showToast('📋 Copied');
+            });
+        }
+
+        function sendWhatsApp() {
+            var text = document.getElementById('message-output').textContent;
+            if (!text) return showToast('❌ Generate a message first');
+
+            navigator.clipboard.writeText(text).then(function() {
+                showToast('📋 Copied! Opening WhatsApp...');
+            }).catch(function() {
+                var area = document.createElement('textarea');
+                area.value = text;
+                document.body.appendChild(area);
+                area.select();
+                document.execCommand('copy');
+                area.remove();
+                showToast('📋 Copied! Opening WhatsApp...');
+            });
+
+            setTimeout(function() {
+                window.open('https://wa.me/', '_blank');
+            }, 500);
+        }
+
+        function showToast(msg) {
+            var t = document.getElementById('toast');
+            if (!t) {
+                t = document.createElement('div');
+                t.id = 'toast';
+                t.className = 'toast';
+                document.body.appendChild(t);
+            }
+            t.textContent = msg;
+            t.classList.add('show');
+            clearTimeout(t._timer);
+            t._timer = setTimeout(function() {
+                t.classList.remove('show');
+            }, 2500);
+        }
+
+        // Ajouter la classe visible au generated-box
+        var observer = new MutationObserver(function() {
+            var box = document.getElementById('generated-box');
+            if (box.style.display === 'block') {
+                box.classList.add('visible');
+            }
+        });
+        observer.observe(document.getElementById('generated-box'), { attributes: true, attributeFilter: ['style'] });
+    </script>
+
+</body>
+</html>
